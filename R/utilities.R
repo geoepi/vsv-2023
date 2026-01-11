@@ -1,3 +1,5 @@
+#various helper functions
+
 # load all .R functions/scripts in the /R directory
 source_dir <- function(directory_path) {
   
