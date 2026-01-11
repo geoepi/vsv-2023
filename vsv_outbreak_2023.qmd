@@ -23,6 +23,9 @@ library(here) # directory managment
 library(tidyverse) # data wrangling
 library(scales) # supports ggplot2
 
+# OSF
+library(osfr) # data management and archiving
+
 #spatial
 library(ggmap) # mapping
 library(ggspatial) # mapping
@@ -33,7 +36,7 @@ library(rnaturalearth) # global geographic data
 library(rnaturalearthhires) # global geographic data
 library(rnaturalearthdata) # global geographic data
 
-# Phylo
+# Phylogenetic tools
 library(ape) #Analyses of Phylogenetics and Evolution (APE)
 library(phangorn) # phylogenetic trees and networks
 library(treeio) # manipulate trees
@@ -45,27 +48,41 @@ library(EpiSky) # prevalence and Re estimation
 
 
 ### Custom Functions
-Load custom functions
-```{r}
+Loading custom functions form the **R** directory.    
+```{r warning=FALSE, message=FALSE}
 source(here("R/utilities.R"))
 source_dir(here("R"))
 ```
 
 
 ### Register API
-Register Stadia Maps API to pull background images.
+Register Stadia Maps API.  Background images for figures provided by Stadia.    
 ```{r}
-map_api <- yaml::read_yaml(here("local", "secrets.yaml"))
-register_stadiamaps(key = map_api$stadi_api)
+personal_api <- yaml::read_yaml(here("local", "secrets.yaml"))
+register_stadiamaps(key = personal_api$stadi_api)
+```
+
+### OSF Link
+Data and outputs generated from this script are stored at the *Open Science Framework (OSF)* and remotely accessed through code here. See, this [**OSF Project:**](https://osf.io/vpr2e/) for direct access.   
+  
+No registration at **OSF** is required to reproduce the analysis, simply remove or skip the *osf_auth(.)* code in the below chunk.   
+```{r message=FALSE}
+osf_auth(personal_api$osf_token) # for write/admin privileges
+```
+
+Record path to **OSF**
+```{r}
+osf_project_data <- osf_retrieve_node("https://osf.io/vpr2e/")
+
+osf_project_data$name # OSF directory for this analysis
 ```
 
 ## Geographic Boundaries
 
 ### California Counties
-Jurisdictional boundaries for California, USA counties
+Reading and cleaning up jurisdictional geographic boundaries for analysis.
 ```{r}
 options(tigris_use_cache = TRUE)
-
 ca_counties <- counties(state = "CA", year = 2022, class = "sf")
 ```
 
@@ -74,7 +91,7 @@ Obtain geographic coordinates for county centers
 ```{r}
 ca_centroids_sf <- st_centroid(ca_counties)
 
-# to SpatVector
+# convert to SpatVector format
 ca_centroids_sv <- vect(ca_centroids_sf)
 
 coord_frame <- as.data.frame(ca_centroids_sv, geom="xy") %>%
@@ -84,8 +101,11 @@ coord_frame <- as.data.frame(ca_centroids_sv, geom="xy") %>%
 
 ## VSV Data
 
-### Unsequenced Detections
-```{r message=FALSE, warning=FALSE}
+### Unsequenced Detections   
+Case reports provided by USDA Animal and Plant Health Inspection Service, see [APHIS VSV Webpage](https://www.aphis.usda.gov/livestock-poultry-disease/cattle/vesicular-stomatitis).  
+  
+The *vsv_county_noPII.csv* file is shown here for completeness and internal documentation purposes, however it contains additional data that is not analysed or presented in the publication.  The cleaned `comb_cases` data is available, all that is used in this analysis, and is downlaoded from **OSF** in the next chunk.     
+```{r message=FALSE, warning=FALSE, eval=FALSE}
 vsv_cases <- read_csv(here("local/vsv_county_noPII.csv")) %>%
   filter(ONSET_YEAR >= 2023 & ONSET_YEAR <= 2024) %>%
   mutate(date = paste0(ONSET_YEAR, "-", ONSET_MONTH, "-", ONSET_DAY),
@@ -104,7 +124,30 @@ comb_cases <- rbind(us_cases, mx_cases) %>%
   group_by(COUNTRY, date) %>%
   summarise(inc = length(date))
 
+# save local copy
+write.csv(comb_cases, here("local/osf_data/comb_cases.csv"), row.names=FALSE)
 
+# push copy to OSF
+osf_upload(osf_project_data, path = here("local/osf_data/comb_cases.csv"))
+```
+
+### Download Case Date
+Downloading from OSF and reading into the current session.  
+```{r warning=FALSE, message=FALSE}
+osf_id <- osf_project_data %>% # OSF project
+  osf_ls_files() %>% # items in OSF project
+  filter(name == "comb_cases.csv") # file to retrieve
+
+osf_download(osf_id,
+             path = here("local/run_data"), # local destination
+             conflicts = "overwrite")
+
+# read file to active environment
+comb_cases <- read_csv(here("local/run_data/comb_cases.csv"))
+```
+
+### Check Case Data
+```{r}
 mex_seq_sample <- as_date("2023-01-15") # date of Sonora, Mx sequence
 epi_start <- min(comb_cases$date) # inclusive of MX sequence, 2023-01-15
 epi_end <- max(comb_cases$date)
@@ -113,8 +156,7 @@ epi_phy_lag <- as.integer(mex_seq_sample - epi_start)
 epi_phy_lag # days offset between case reports and genomic sample collection
 ```
 
-
-## Case Data
+### Case Data
 Mexico detections are for Sonora and Chihuahua, Mexico only.
 ```{r fig.width=15, fig.height=10}
 inc_plot <- comb_cases %>%

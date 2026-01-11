@@ -6,7 +6,6 @@ VSV 2023 California Outbreak
 - <a href="#geographic-boundaries"
   id="toc-geographic-boundaries">Geographic Boundaries</a>
 - <a href="#vsv-data" id="toc-vsv-data">VSV Data</a>
-- <a href="#case-data" id="toc-case-data">Case Data</a>
 - <a href="#substitution-model" id="toc-substitution-model">Substitution
   Model</a>
 - <a href="#maximum-likelihood-tree"
@@ -35,6 +34,9 @@ library(here) # directory managment
 library(tidyverse) # data wrangling
 library(scales) # supports ggplot2
 
+# OSF
+library(osfr) # data management and archiving
+
 #spatial
 library(ggmap) # mapping
 library(ggspatial) # mapping
@@ -45,7 +47,7 @@ library(rnaturalearth) # global geographic data
 library(rnaturalearthhires) # global geographic data
 library(rnaturalearthdata) # global geographic data
 
-# Phylo
+# Phylogenetic tools
 library(ape) #Analyses of Phylogenetics and Evolution (APE)
 library(phangorn) # phylogenetic trees and networks
 library(treeio) # manipulate trees
@@ -59,28 +61,13 @@ library(EpiSky) # prevalence and Re estimation
 
 ### Custom Functions
 
-Load custom functions
+Loading custom functions form the **R** directory.
 
 <details open>
 <summary>Hide code</summary>
 
 ``` r
 source(here("R/utilities.R"))
-```
-
-</details>
-
-
-    Attaching package: 'knitr'
-
-    The following object is masked from 'package:terra':
-
-        spin
-
-<details open>
-<summary>Hide code</summary>
-
-``` r
 source_dir(here("R"))
 ```
 
@@ -88,30 +75,64 @@ source_dir(here("R"))
 
 ### Register API
 
-Register Stadia Maps API to pull background images.
+Register Stadia Maps API. Background images for figures provided by
+Stadia.
 
 <details open>
 <summary>Hide code</summary>
 
 ``` r
-map_api <- yaml::read_yaml(here("local", "secrets.yaml"))
-register_stadiamaps(key = map_api$stadi_api)
+personal_api <- yaml::read_yaml(here("local", "secrets.yaml"))
+register_stadiamaps(key = personal_api$stadi_api)
 ```
 
 </details>
+
+### OSF Link
+
+Data and outputs generated from this script are stored at the *Open
+Science Framework (OSF)* and remotely accessed through code here. See,
+this [**OSF Project:**](https://osf.io/vpr2e/) for direct access.
+
+No registration at **OSF** is required to reproduce the analysis, simply
+remove or skip the *osf_auth(.)* code in the below chunk.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+osf_auth(personal_api$osf_token) # for write/admin privileges
+```
+
+</details>
+
+Record path to **OSF**
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+osf_project_data <- osf_retrieve_node("https://osf.io/vpr2e/")
+
+osf_project_data$name # OSF directory for this analysis
+```
+
+</details>
+
+    [1] "VSV-Epidemic-2023"
 
 ## Geographic Boundaries
 
 ### California Counties
 
-Jurisdictional boundaries for California, USA counties
+Reading and cleaning up jurisdictional geographic boundaries for
+analysis.
 
 <details open>
 <summary>Hide code</summary>
 
 ``` r
 options(tigris_use_cache = TRUE)
-
 ca_counties <- counties(state = "CA", year = 2022, class = "sf")
 ```
 
@@ -136,7 +157,7 @@ ca_centroids_sf <- st_centroid(ca_counties)
 <summary>Hide code</summary>
 
 ``` r
-# to SpatVector
+# convert to SpatVector format
 ca_centroids_sv <- vect(ca_centroids_sf)
 
 coord_frame <- as.data.frame(ca_centroids_sv, geom="xy") %>%
@@ -149,6 +170,16 @@ coord_frame <- as.data.frame(ca_centroids_sv, geom="xy") %>%
 ## VSV Data
 
 ### Unsequenced Detections
+
+Case reports provided by USDA Animal and Plant Health Inspection
+Service, see [APHIS VSV
+Webpage](https://www.aphis.usda.gov/livestock-poultry-disease/cattle/vesicular-stomatitis).
+
+The *vsv_county_noPII.csv* file is shown here for completeness and
+internal documentation purposes, however it contains additional data
+that is not analysed or presented in the publication. The cleaned
+`comb_cases` data is available, all that is used in this analysis, and
+is downlaoded from **OSF** in the next chunk.
 
 <details open>
 <summary>Hide code</summary>
@@ -172,7 +203,55 @@ comb_cases <- rbind(us_cases, mx_cases) %>%
   group_by(COUNTRY, date) %>%
   summarise(inc = length(date))
 
+# save local copy
+write.csv(comb_cases, here("local/osf_data/comb_cases.csv"), row.names=FALSE)
 
+# push copy to OSF
+osf_upload(osf_project_data, path = here("local/osf_data/comb_cases.csv"))
+```
+
+</details>
+
+### Download Case Date
+
+Downloading from OSF and reading into the current session.
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+osf_id <- osf_project_data %>% # OSF project
+  osf_ls_files() %>% # items in OSF project
+  filter(name == "comb_cases.csv") # file to retrieve
+
+osf_download(osf_id,
+             path = here("local/run_data"), # local destination
+             conflicts = "overwrite")
+```
+
+</details>
+
+    # A tibble: 1 × 4
+      name           id                       local_path                meta        
+      <chr>          <chr>                    <chr>                     <list>      
+    1 comb_cases.csv 69630809c9dbdf0f77844959 local/run_data/comb_case… <named list>
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+# read file to active environment
+comb_cases <- read_csv(here("local/run_data/comb_cases.csv"))
+```
+
+</details>
+
+### Check Case Data
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
 mex_seq_sample <- as_date("2023-01-15") # date of Sonora, Mx sequence
 epi_start <- min(comb_cases$date) # inclusive of MX sequence, 2023-01-15
 epi_end <- max(comb_cases$date)
@@ -185,7 +264,7 @@ epi_phy_lag # days offset between case reports and genomic sample collection
 
     [1] 11
 
-## Case Data
+### Case Data
 
 Mexico detections are for Sonora and Chihuahua, Mexico only.
 
@@ -231,7 +310,7 @@ ggplot(inc_plot, aes(x = epiweek_start, y = inc, fill = COUNTRY)) +
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-7-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 ### Genomic Metadata
 
@@ -488,11 +567,11 @@ mt %>% # no important differences
 </details>
 
            Model df    logLik      AIC       AICw     AICc      AICcw      BIC
-    1      TVM+I 77 -16258.26 32670.51 0.24357108 32671.60 0.24274899 33233.91
-    2   TVM+G(4) 77 -16258.91 32671.83 0.12632639 32672.91 0.12590002 33235.22
-    3 TVM+G(4)+I 78 -16258.07 32672.13 0.10835880 32673.25 0.10647325 33242.85
-    4      GTR+I 78 -16258.26 32672.51 0.08961929 32673.63 0.08805983 33243.23
-    5    TPM2u+I 75 -16261.45 32672.91 0.07355440 32673.94 0.07537233 33221.67
+    1      TVM+I 77 -16258.26 32670.51 0.24357534 32671.60 0.24275320 33233.91
+    2   TVM+G(4) 77 -16258.91 32671.83 0.12631583 32672.91 0.12588948 33235.22
+    3 TVM+G(4)+I 78 -16258.07 32672.13 0.10836069 32673.25 0.10647510 33242.85
+    4      GTR+I 78 -16258.26 32672.51 0.08962085 32673.63 0.08806135 33243.23
+    5    TPM2u+I 75 -16261.45 32672.91 0.07355569 32673.94 0.07537363 33221.67
 
 <details open>
 <summary>Hide code</summary>
@@ -581,7 +660,7 @@ bs_tree <- plotBS(midpoint(ml_tree), boots,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-15-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-19-1.png)
 
 <details open>
 <summary>Hide code</summary>
@@ -594,7 +673,7 @@ title("Maximum Likelihood")
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-15-2.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-19-2.png)
 
 ## Time Calibrated Tree
 
@@ -621,7 +700,7 @@ abline(lm(rtips ~ date_vector), col = "red")
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-16-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-20-1.png)
 
 <details open>
 <summary>Hide code</summary>
@@ -642,7 +721,7 @@ summary(lm(rtips ~ date_vector))
 
     Coefficients:
                   Estimate Std. Error t value Pr(>|t|)    
-    (Intercept) -1.9419518  0.4224896  -4.596 5.69e-05 ***
+    (Intercept) -1.9419820  0.4224950  -4.596 5.69e-05 ***
     date_vector  0.0009600  0.0002088   4.598 5.67e-05 ***
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
@@ -740,7 +819,7 @@ p
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-19-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-23-1.png)
 
 <details open>
 <summary>Hide code</summary>
@@ -815,7 +894,7 @@ tree_p
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-20-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-24-1.png)
 
 <details open>
 <summary>Hide code</summary>
@@ -884,7 +963,7 @@ mantel_result
 
     Upper quantiles of permutations (null model):
       90%   95% 97.5%   99% 
-    0.168 0.224 0.408 0.510 
+    0.164 0.229 0.421 0.508 
     Permutation: free
     Number of permutations: 9999
 
@@ -926,7 +1005,7 @@ phylodynamic_process(tree=phy,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-24-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-28-1.png)
 
 ## Phylogeography
 
@@ -948,7 +1027,7 @@ plot_migration_network_terra(tree_loc,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-25-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-29-1.png)
 
 version with simple background
 
@@ -965,7 +1044,7 @@ plot_migration_network(tree_loc,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-26-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-30-1.png)
 
 ## Estimate Prevalence
 
@@ -1154,4 +1233,4 @@ plot_rt_prev(vsv_simulation, death_rate,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-32-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-36-1.png)
