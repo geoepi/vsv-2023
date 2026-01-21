@@ -59,7 +59,7 @@ plot_rt_prev <- function(vsv_simulation,
       aes(yintercept = 1),
       color = "gray40",
       linetype = "dashed",
-      linewidth = 0.6
+      linewidth = 0.9
     ) +
     facet_wrap(~ panel, ncol = 1, scales = "free_y") +
     scale_x_date(
@@ -72,11 +72,12 @@ plot_rt_prev <- function(vsv_simulation,
     ) +
     theme_minimal() +
     theme(
+      plot.margin = margin(1, 2, 1, 2, "cm"),
       strip.text     = element_text(size = 18, face = "bold", color = "gray40"),
       axis.title.x   = element_text(size = 20, face = "bold"),
       axis.title.y   = element_text(size = 20, face = "bold"),
-      axis.text.x    = element_text(size = 10, face = "bold"),
-      axis.text.y    = element_text(size = 10, face = "bold"),
+      axis.text.x    = element_text(size = 16, face = "bold"),
+      axis.text.y    = element_text(size = 16, face = "bold"),
     )
 }
 

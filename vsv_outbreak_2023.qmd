@@ -189,8 +189,8 @@ ggplot(inc_plot, aes(x = epiweek_start, y = inc, fill = COUNTRY)) +
     legend.title = element_text(size = 16, face = "bold"),
     axis.title.x = element_text(size = 20, face = "bold", vjust = -2),
     axis.title.y = element_text(size = 20, face = "bold", vjust = 3),
-    axis.text.x = element_text(size = 14, face = "bold"),
-    axis.text.y = element_text(size = 14, face = "bold"),
+    axis.text.x = element_text(size = 18, face = "bold"),
+    axis.text.y = element_text(size = 18, face = "bold"),
     plot.title = element_text(size = 22, face = "bold", colour="gray50", hjust = 0.5)
   )
 ```
@@ -230,6 +230,9 @@ selected_seqs <- alignment[matched_labels, , drop = FALSE]
 write.nexus.data(as.character(selected_seqs), 
                  file = here("local/vsv_2023.nex"), 
                  format = "dna")
+
+# push copy to OSF
+osf_upload(osf_project_data, path = here("local/vsv_2023.nex"))
 ```
 
 ### Organize Data
@@ -380,6 +383,12 @@ write.table(dates_file,
             quote = FALSE)
 ```
 
+## Beauti File
+Push copy of Beauti input file needed for [BEAST](https://github.com/CompEvol/beast2) to OSF
+```{r eval=FALSE}
+osf_upload(osf_project_data, path = here("local/run_2025-12-18/beauti_info.xml"))
+```
+
 
 ### Tracer Stats
 Tree run in BEAST
@@ -396,6 +405,17 @@ tracer_stats %>%
 ```
 
 ### View Time Tree
+Download trees
+```{r}
+osf_project_data %>%
+  osf_ls_files() %>%
+  filter(grepl("\\.tree$", name)) %>%
+  osf_download(
+    path = here("local/run_2025-12-18"),
+    conflicts = "overwrite"
+  )
+```
+
 ```{r fig.width=10, fig.height=10, message=FALSE, warning=FALSE}
 mcc_tree <- read.beast(here("local/run_2025-12-18/mcc.tree"))
 tree_data <- as_tibble(mcc_tree)
@@ -431,7 +451,7 @@ p
 ```
 
 ### GeoCoded Tree
-```{r fig.width=10, fig.height=10, message=FALSE, warning=FALSE}
+```{r fig.width=10, fig.height=15, message=FALSE, warning=FALSE}
 tree_loc <- read.beast(here("local/run_2025-12-18/location_mcc.tree"))
 
 tip_meta <- as_tibble(tree_loc) %>% 
@@ -456,7 +476,7 @@ tree_p <- ggtree(mcc_tree, mrsd = "2023-11-08") %<+% tip_meta +
   ggnewscale::new_scale_color() +
   geom_tippoint(
     aes(color = location),
-    size = 4,
+    size = 6,
     alpha = 0.9
   ) +
   scale_color_manual(
@@ -466,24 +486,26 @@ tree_p <- ggtree(mcc_tree, mrsd = "2023-11-08") %<+% tip_meta +
                               loc_label_map[x],
                               x)
   ) +
-  geom_tiplab(size = 3) +
+  geom_tiplab(size = 3, hjust = -0.09) +
   labs(title = " ") +
   theme(
-    plot.margin = unit(c(0.15, 2.25, 0.15, 2.25), "cm"),
+    plot.margin = unit(c(0.15, 0.15, 0.15, 1.15), "cm"),
     legend.key.width = unit(1, "line"),
     legend.key.height = unit(2, "line"),
-    legend.title = element_text(size = 16, face = "bold"),
-    legend.text = element_text(size = 12, face = "bold"),
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 16, face = "bold"),
     legend.position.inside = TRUE,
     legend.position = c(0.08, 0.65),
     plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
     axis.title.x = element_text(size = 16, face = "bold"),
-    axis.text.x = element_text(size = 16, face = "bold")
+    axis.text.x = element_text(size = 25, face = "bold")
   ) +
   scale_x_continuous(
     name = "  ",
     expand = c(0.01, 0)
   )
+
+tree_p <- tree_p + hexpand(0.2, direction = 1)
 
 tree_p
 
@@ -688,8 +710,15 @@ saveRDS(chain, here("local/est_R0/vsv_simulation_2025-12-30.rds"))
 ```
 
 ### Effective Reproduction and Prevalence
-Read results
+Download and read simulation results
 ```{r}
+osf_id <- osf_project_data %>%
+  osf_ls_files() %>%
+  filter(name == "vsv_simulation_2025-12-30.rds") %>%
+  osf_download(osf_id,
+               path = here("local/est_R0"),
+               conflicts = "overwrite")
+
 vsv_simulation <- readRDS(here("local/est_R0/vsv_simulation_2025-12-30.rds"))
 ```
 

@@ -63,6 +63,7 @@ phylodynamic_process <- function(tree,
     scale_y_continuous(
       trans = "log10",
       breaks = log_breaks,
+      limits = c(1e-2, 1e1),
       labels = trans_format("log10", math_format(10^.x))
     ) +
     ylab("Effective Population Size (Ne)") +
@@ -78,10 +79,10 @@ phylodynamic_process <- function(tree,
       legend.key.width = unit(1, "line"),
       legend.text = element_text(size = 16, face = "bold"),
       legend.title = element_text(size = 18, face = "bold"),
-      axis.title.x = element_text(size = 20, face = "bold", vjust = -2),
-      axis.title.y = element_text(size = 20, face = "bold", vjust = 3),
-      axis.text.x = element_text(size = 14, face = "bold"),
-      axis.text.y = element_text(size = 14, face = "bold"),
+      axis.title.x = element_text(size = 22, face = "bold", vjust = -2),
+      axis.title.y = element_text(size = 22, face = "bold", vjust = 3),
+      axis.text.x = element_text(size = 20, face = "bold"),
+      axis.text.y = element_text(size = 20, face = "bold"),
       plot.title = element_text(size = 28, face = "bold")
     )
 }

@@ -13,6 +13,7 @@ VSV 2023 California Outbreak
 - <a href="#bootstrap" id="toc-bootstrap">Bootstrap</a>
 - <a href="#time-calibrated-tree" id="toc-time-calibrated-tree">Time
   Calibrated Tree</a>
+- <a href="#beauti-file" id="toc-beauti-file">Beauti File</a>
 - <a href="#geographic-signal" id="toc-geographic-signal">Geographic
   Signal</a>
 - <a href="#phylodynamics-ne" id="toc-phylodynamics-ne">Phylodynamics
@@ -302,8 +303,8 @@ ggplot(inc_plot, aes(x = epiweek_start, y = inc, fill = COUNTRY)) +
     legend.title = element_text(size = 16, face = "bold"),
     axis.title.x = element_text(size = 20, face = "bold", vjust = -2),
     axis.title.y = element_text(size = 20, face = "bold", vjust = 3),
-    axis.text.x = element_text(size = 14, face = "bold"),
-    axis.text.y = element_text(size = 14, face = "bold"),
+    axis.text.x = element_text(size = 18, face = "bold"),
+    axis.text.y = element_text(size = 18, face = "bold"),
     plot.title = element_text(size = 22, face = "bold", colour="gray50", hjust = 0.5)
   )
 ```
@@ -393,6 +394,9 @@ selected_seqs <- alignment[matched_labels, , drop = FALSE]
 write.nexus.data(as.character(selected_seqs), 
                  file = here("local/vsv_2023.nex"), 
                  format = "dna")
+
+# push copy to OSF
+osf_upload(osf_project_data, path = here("local/vsv_2023.nex"))
 ```
 
 </details>
@@ -567,11 +571,11 @@ mt %>% # no important differences
 </details>
 
            Model df    logLik      AIC       AICw     AICc      AICcw      BIC
-    1      TVM+I 77 -16258.26 32670.51 0.24357534 32671.60 0.24275320 33233.91
-    2   TVM+G(4) 77 -16258.91 32671.83 0.12631583 32672.91 0.12588948 33235.22
-    3 TVM+G(4)+I 78 -16258.07 32672.13 0.10836069 32673.25 0.10647510 33242.85
-    4      GTR+I 78 -16258.26 32672.51 0.08962085 32673.63 0.08806135 33243.23
-    5    TPM2u+I 75 -16261.45 32672.91 0.07355569 32673.94 0.07537363 33221.67
+    1      TVM+I 77 -16258.26 32670.51 0.24357220 32671.60 0.24275008 33233.91
+    2   TVM+G(4) 77 -16258.91 32671.83 0.12632700 32672.91 0.12590062 33235.22
+    3 TVM+G(4)+I 78 -16258.07 32672.13 0.10835930 32673.25 0.10647373 33242.85
+    4      GTR+I 78 -16258.26 32672.51 0.08961968 32673.63 0.08806020 33243.23
+    5    TPM2u+I 75 -16261.45 32672.91 0.07355473 32673.94 0.07537266 33221.67
 
 <details open>
 <summary>Hide code</summary>
@@ -717,18 +721,18 @@ summary(lm(rtips ~ date_vector))
 
     Residuals:
            Min         1Q     Median         3Q        Max 
-    -3.405e-04 -1.275e-04 -5.300e-06  7.584e-05  5.152e-04 
+    -3.405e-04 -1.275e-04 -5.320e-06  7.585e-05  5.152e-04 
 
     Coefficients:
                   Estimate Std. Error t value Pr(>|t|)    
-    (Intercept) -1.9419820  0.4224950  -4.596 5.69e-05 ***
+    (Intercept) -1.9419006  0.4224872  -4.596 5.70e-05 ***
     date_vector  0.0009600  0.0002088   4.598 5.67e-05 ***
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Residual standard error: 0.0001914 on 34 degrees of freedom
     Multiple R-squared:  0.3834,    Adjusted R-squared:  0.3653 
-    F-statistic: 21.14 on 1 and 34 DF,  p-value: 5.669e-05
+    F-statistic: 21.14 on 1 and 34 DF,  p-value: 5.67e-05
 
 Save dates file for BEAST
 
@@ -745,6 +749,20 @@ write.table(dates_file,
             row.names = FALSE,
             col.names = TRUE,
             quote = FALSE)
+```
+
+</details>
+
+## Beauti File
+
+Push copy of Beauti input file needed for
+[BEAST](https://github.com/CompEvol/beast2) to OSF
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+osf_upload(osf_project_data, path = here("local/run_2025-12-18/beauti_info.xml"))
 ```
 
 </details>
@@ -781,6 +799,29 @@ tracer_stats %>%
     8 CoalescentConstant     -3.104     -2.790    -16.540      8.627  7726
 
 ### View Time Tree
+
+Download trees
+
+<details open>
+<summary>Hide code</summary>
+
+``` r
+osf_project_data %>%
+  osf_ls_files() %>%
+  filter(grepl("\\.tree$", name)) %>%
+  osf_download(
+    path = here("local/run_2025-12-18"),
+    conflicts = "overwrite"
+  )
+```
+
+</details>
+
+    # A tibble: 2 × 4
+      name              id                       local_path             meta        
+      <chr>             <chr>                    <chr>                  <list>      
+    1 location_mcc.tree 6970069f188b6a06f61b0382 local/run_2025-12-18/… <named list>
+    2 mcc.tree          6970070e9377eadcb8b50d1c local/run_2025-12-18/… <named list>
 
 <details open>
 <summary>Hide code</summary>
@@ -819,7 +860,7 @@ p
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-23-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-25-1.png)
 
 <details open>
 <summary>Hide code</summary>
@@ -860,7 +901,7 @@ tree_p <- ggtree(mcc_tree, mrsd = "2023-11-08") %<+% tip_meta +
   ggnewscale::new_scale_color() +
   geom_tippoint(
     aes(color = location),
-    size = 4,
+    size = 6,
     alpha = 0.9
   ) +
   scale_color_manual(
@@ -870,31 +911,33 @@ tree_p <- ggtree(mcc_tree, mrsd = "2023-11-08") %<+% tip_meta +
                               loc_label_map[x],
                               x)
   ) +
-  geom_tiplab(size = 3) +
+  geom_tiplab(size = 3, hjust = -0.09) +
   labs(title = " ") +
   theme(
-    plot.margin = unit(c(0.15, 2.25, 0.15, 2.25), "cm"),
+    plot.margin = unit(c(0.15, 0.15, 0.15, 1.15), "cm"),
     legend.key.width = unit(1, "line"),
     legend.key.height = unit(2, "line"),
-    legend.title = element_text(size = 16, face = "bold"),
-    legend.text = element_text(size = 12, face = "bold"),
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 16, face = "bold"),
     legend.position.inside = TRUE,
     legend.position = c(0.08, 0.65),
     plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
     axis.title.x = element_text(size = 16, face = "bold"),
-    axis.text.x = element_text(size = 16, face = "bold")
+    axis.text.x = element_text(size = 25, face = "bold")
   ) +
   scale_x_continuous(
     name = "  ",
     expand = c(0.01, 0)
   )
 
+tree_p <- tree_p + hexpand(0.2, direction = 1)
+
 tree_p
 ```
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-24-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-26-1.png)
 
 <details open>
 <summary>Hide code</summary>
@@ -963,7 +1006,7 @@ mantel_result
 
     Upper quantiles of permutations (null model):
       90%   95% 97.5%   99% 
-    0.164 0.229 0.421 0.508 
+    0.168 0.234 0.426 0.511 
     Permutation: free
     Number of permutations: 9999
 
@@ -1005,7 +1048,7 @@ phylodynamic_process(tree=phy,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-28-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-30-1.png)
 
 ## Phylogeography
 
@@ -1027,7 +1070,7 @@ plot_migration_network_terra(tree_loc,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-29-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-31-1.png)
 
 version with simple background
 
@@ -1044,7 +1087,7 @@ plot_migration_network(tree_loc,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-30-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-32-1.png)
 
 ## Estimate Prevalence
 
@@ -1212,12 +1255,19 @@ saveRDS(chain, here("local/est_R0/vsv_simulation_2025-12-30.rds"))
 
 ### Effective Reproduction and Prevalence
 
-Read results
+Download and read simulation results
 
 <details open>
 <summary>Hide code</summary>
 
 ``` r
+osf_id <- osf_project_data %>%
+  osf_ls_files() %>%
+  filter(name == "vsv_simulation_2025-12-30.rds") %>%
+  osf_download(osf_id,
+               path = here("local/est_R0"),
+               conflicts = "overwrite")
+
 vsv_simulation <- readRDS(here("local/est_R0/vsv_simulation_2025-12-30.rds"))
 ```
 
@@ -1233,4 +1283,4 @@ plot_rt_prev(vsv_simulation, death_rate,
 
 </details>
 
-![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-36-1.png)
+![](vsv_outbreak_2023_files/figure-commonmark/unnamed-chunk-38-1.png)

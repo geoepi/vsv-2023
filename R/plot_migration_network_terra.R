@@ -81,7 +81,7 @@ plot_migration_network_terra <- function(tree,
     geom_point(
       data = locs_match,
       aes(x = x, y = y, color = location),
-      size = 5
+      size = 7
     ) +
     scale_color_manual(
       values = loc_cols,
@@ -129,8 +129,8 @@ plot_migration_network_terra <- function(tree,
       legend.key.height = unit(1, "line"),
       axis.title.x = element_text(size = 24, color="gray30"),
       axis.title.y = element_text(size = 24, color = "gray30"),
-      axis.text.x = element_text(size = 10, face = "bold"),
-      axis.text.y = element_text(size = 10, face = "bold"),
+      axis.text.x = element_text(size = 20, face = "bold"),
+      axis.text.y = element_text(size = 20, face = "bold"),
       plot.title = element_text(size = 22, face = "bold", hjust = 0.5)
     ) +
     labs(
